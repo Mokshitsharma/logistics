@@ -1,0 +1,83 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A customer who uses the fleet management platform.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "The user's full name." },
+        "email": { "type": "string", "format": "email", "description": "The user's unique email address." },
+        "balance": { "type": "number", "description": "The current wallet balance of the user." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp when the user was created." }
+      },
+      "required": ["name", "email", "balance"]
+    },
+    "Captain": {
+      "title": "Captain",
+      "description": "A driver who provides services on the platform.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "The captain's full name." },
+        "email": { "type": "string", "format": "email", "description": "The captain's unique email address." },
+        "balance": { "type": "number", "description": "The current virtual balance of the captain." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp when the captain was created." }
+      },
+      "required": ["name", "email", "balance"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "A ride or delivery booking record.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Reference to the user who made the booking." },
+        "captainId": { "type": "string", "description": "Reference to the captain assigned to the booking." },
+        "basePrice": { "type": "number", "description": "The base price of the booking." },
+        "waitingCharge": { "type": "number", "description": "Charge for waiting time." },
+        "loadingCharge": { "type": "number", "description": "Charge for loading services." },
+        "longDistanceFee": { "type": "number", "description": "Additional fee for long distance." },
+        "lateNightFee": { "type": "number", "description": "Additional fee for late night service." },
+        "totalDiscount": { "type": "number", "description": "Total discount applied." },
+        "finalAmount": { "type": "number", "description": "The final amount charged to the user." },
+        "paymentMode": { "type": "string", "enum": ["CASH", "ONLINE"], "description": "The mode of payment." },
+        "status": { "type": "string", "enum": ["COMPLETED", "CANCELLED", "PENDING"], "description": "The current status of the booking." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp when the booking was created." }
+      },
+      "required": ["userId", "captainId", "basePrice", "finalAmount", "paymentMode", "status"]
+    },
+    "UserTransaction": {
+      "title": "UserTransaction",
+      "description": "A wallet transaction for a user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Reference to the user." },
+        "type": { "type": "string", "enum": ["CREDIT", "DEBIT", "DISCOUNT"], "description": "Type of transaction." },
+        "amount": { "type": "number", "description": "Amount of the transaction." },
+        "description": { "type": "string", "description": "Description of the transaction." },
+        "balanceAfter": { "type": "number", "description": "Wallet balance after this transaction." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of the transaction." }
+      },
+      "required": ["userId", "type", "amount", "balanceAfter"]
+    },
+    "CaptainTransaction": {
+      "title": "CaptainTransaction",
+      "description": "A ledger transaction for a captain.",
+      "type": "object",
+      "properties": {
+        "captainId": { "type": "string", "description": "Reference to the captain." },
+        "type": { "type": "string", "enum": ["EARNING", "COMMISSION", "ADJUSTMENT", "SETTLEMENT"], "description": "Type of transaction." },
+        "amount": { "type": "number", "description": "Amount of the transaction." },
+        "description": { "type": "string", "description": "Description of the transaction." },
+        "balanceAfter": { "type": "number", "description": "Ledger balance after this transaction." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of the transaction." }
+      },
+      "required": ["captainId", "type", "amount", "balanceAfter"]
+    }
+  },
+  "firestore": {
+    "users": { "schema": "User", "description": "Collection of users." },
+    "captains": { "schema": "Captain", "description": "Collection of captains." },
+    "bookings": { "schema": "Booking", "description": "Collection of bookings." },
+    "userTransactions": { "schema": "UserTransaction", "description": "Collection of user transactions." },
+    "captainTransactions": { "schema": "CaptainTransaction", "description": "Collection of captain transactions." }
+  }
+}

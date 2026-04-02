@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import { getUsers, getCaptains, createBooking } from "../services/firestoreService";
 import { motion } from "motion/react";
 import { Plus, Minus, Tag, CheckCircle2, AlertCircle, Loader2, Search } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
@@ -37,12 +37,12 @@ export default function BookingPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [usersRes, captainsRes] = await Promise.all([
-          axios.get("/api/admin/users"),
-          axios.get("/api/admin/captains"),
+        const [usersData, captainsData] = await Promise.all([
+          getUsers(),
+          getCaptains(),
         ]);
-        setUsers(usersRes.data);
-        setCaptains(captainsRes.data);
+        setUsers(usersData || []);
+        setCaptains(captainsData || []);
       } catch (e) {
         console.error(e);
       } finally {
@@ -93,9 +93,12 @@ export default function BookingPage() {
     setSuccess(null);
 
     try {
-      await axios.post("/api/booking/create", {
+      const finalAmount = calculateTotal();
+      await createBooking({
         ...formData,
         totalDiscount: appliedDiscount,
+        finalAmount,
+        status: "COMPLETED"
       });
       setSuccess("Booking completed successfully!");
       setFormData({
@@ -109,7 +112,7 @@ export default function BookingPage() {
       setAppliedDiscount(0);
       setDiscountMessage("");
     } catch (e: any) {
-      setError(e.response?.data?.error || "Booking failed");
+      setError(e.message || "Booking failed");
     } finally {
       setBookingLoading(false);
     }

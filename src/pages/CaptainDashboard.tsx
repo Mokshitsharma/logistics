@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import { getCaptains, getCaptain, getBookingsByCaptain, subscribeCaptainTransactions } from "../services/firestoreService";
 import { motion } from "motion/react";
 import { 
   TrendingUp, 
@@ -24,16 +24,18 @@ export default function CaptainDashboard() {
   const [captains, setCaptains] = useState<any[]>([]);
   const [selectedCaptainId, setSelectedCaptainId] = useState("");
   const [captainData, setCaptainData] = useState<any>(null);
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [captainLoading, setCaptainLoading] = useState(false);
 
   useEffect(() => {
     const fetchCaptains = async () => {
       try {
-        const res = await axios.get("/api/admin/captains");
-        setCaptains(res.data);
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          setSelectedCaptainId(res.data[0].id);
+        const data = await getCaptains();
+        setCaptains(data || []);
+        if (Array.isArray(data) && data.length > 0) {
+          setSelectedCaptainId(data[0].id);
         }
       } catch (e) {
         console.error(e);
@@ -47,14 +49,22 @@ export default function CaptainDashboard() {
   useEffect(() => {
     if (selectedCaptainId) {
       fetchCaptainData();
+      const unsubscribe = subscribeCaptainTransactions(selectedCaptainId, (txs) => {
+        setTransactions(txs);
+      });
+      return () => unsubscribe();
     }
   }, [selectedCaptainId]);
 
   const fetchCaptainData = async () => {
     setCaptainLoading(true);
     try {
-      const res = await axios.get(`/api/captain/dashboard/${selectedCaptainId}`);
-      setCaptainData(res.data);
+      const [captain, captainBookings] = await Promise.all([
+        getCaptain(selectedCaptainId),
+        getBookingsByCaptain(selectedCaptainId)
+      ]);
+      setCaptainData(captain);
+      setBookings(captainBookings || []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -63,11 +73,10 @@ export default function CaptainDashboard() {
   };
 
   const calculateStats = () => {
-    if (!captainData) return { earnings: 0, commission: 0 };
-    const earnings = (Array.isArray(captainData.transactions) ? captainData.transactions : [])
+    const earnings = (Array.isArray(transactions) ? transactions : [])
       .filter((tx: any) => tx.type === "EARNING")
       .reduce((acc: number, tx: any) => acc + tx.amount, 0);
-    const commission = (Array.isArray(captainData.transactions) ? captainData.transactions : [])
+    const commission = (Array.isArray(transactions) ? transactions : [])
       .filter((tx: any) => tx.type === "COMMISSION")
       .reduce((acc: number, tx: any) => acc + tx.amount, 0);
     return { earnings, commission };
@@ -169,15 +178,17 @@ export default function CaptainDashboard() {
                 </h3>
               </div>
               <div className="divide-y divide-slate-100">
-                {captainData.bookings.length === 0 ? (
+                {bookings.length === 0 ? (
                   <div className="p-12 text-center text-slate-400">No rides completed yet.</div>
                 ) : (
-                  captainData.bookings.map((ride: any) => (
+                  bookings.map((ride: any) => (
                     <div key={ride.id} className="p-4 hover:bg-slate-50 transition-colors">
                       <div className="flex justify-between items-start mb-2">
                         <div>
                           <p className="text-xs font-bold text-indigo-600 uppercase tracking-tighter">Booking #{ride.id.slice(0, 8)}</p>
-                          <p className="text-sm text-slate-500">{new Date(ride.createdAt).toLocaleString()}</p>
+                          <p className="text-sm text-slate-500">
+                            {ride.createdAt?.toDate ? ride.createdAt.toDate().toLocaleString() : new Date(ride.createdAt).toLocaleString()}
+                          </p>
                         </div>
                         <div className={cn(
                           "px-2 py-1 rounded text-[10px] font-bold uppercase",
@@ -211,10 +222,10 @@ export default function CaptainDashboard() {
                 </h3>
               </div>
               <div className="divide-y divide-slate-100">
-                {captainData.transactions.length === 0 ? (
+                {transactions.length === 0 ? (
                   <div className="p-12 text-center text-slate-400">No transactions recorded.</div>
                 ) : (
-                  captainData.transactions.map((tx: any) => (
+                  transactions.map((tx: any) => (
                     <div key={tx.id} className="p-4 hover:bg-slate-50 transition-colors flex items-center justify-between">
                       <div className="flex items-center space-x-4">
                         <div className={cn(
@@ -225,7 +236,9 @@ export default function CaptainDashboard() {
                         </div>
                         <div>
                           <p className="font-semibold text-slate-900 text-sm">{tx.description}</p>
-                          <p className="text-[10px] text-slate-500">{new Date(tx.createdAt).toLocaleString()}</p>
+                          <p className="text-[10px] text-slate-500">
+                            {tx.createdAt?.toDate ? tx.createdAt.toDate().toLocaleString() : new Date(tx.createdAt).toLocaleString()}
+                          </p>
                         </div>
                       </div>
                       <div className="text-right">

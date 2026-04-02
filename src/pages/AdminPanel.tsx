@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import { getAllBookings, getCaptains, getUsers, getFinancials } from "../services/firestoreService";
 import { motion } from "motion/react";
 import { 
   BarChart3, 
@@ -40,16 +40,16 @@ export default function AdminPanel() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [ridesRes, captainsRes, usersRes, financialsRes] = await Promise.all([
-        axios.get("/api/admin/rides"),
-        axios.get("/api/admin/captains"),
-        axios.get("/api/admin/users"),
-        axios.get("/api/admin/financials"),
+      const [ridesData, captainsData, usersData, financialsData] = await Promise.all([
+        getAllBookings(),
+        getCaptains(),
+        getUsers(),
+        getFinancials(),
       ]);
-      setRides(ridesRes.data);
-      setCaptains(captainsRes.data);
-      setUsers(usersRes.data);
-      setFinancials(financialsRes.data);
+      setRides(ridesData || []);
+      setCaptains(captainsData || []);
+      setUsers(usersData || []);
+      setFinancials(financialsData);
     } catch (e) {
       console.error(e);
     } finally {
@@ -192,11 +192,11 @@ export default function AdminPanel() {
                     <tr key={ride.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4 font-mono text-xs text-slate-400">{ride.id.slice(0, 8)}</td>
                       <td className="px-6 py-4">
-                        <p className="font-semibold text-slate-900">{ride.user.name}</p>
-                        <p className="text-xs text-slate-400">{ride.user.email}</p>
+                        <p className="font-semibold text-slate-900">{ride.userName}</p>
+                        <p className="text-xs text-slate-400">{ride.userEmail}</p>
                       </td>
                       <td className="px-6 py-4">
-                        <p className="font-semibold text-slate-900">{ride.captain.name}</p>
+                        <p className="font-semibold text-slate-900">{ride.captainName}</p>
                       </td>
                       <td className="px-6 py-4">₹{ride.basePrice}</td>
                       <td className="px-6 py-4 text-slate-500">
@@ -211,7 +211,9 @@ export default function AdminPanel() {
                           {ride.paymentMode}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-slate-500">{new Date(ride.createdAt).toLocaleDateString()}</td>
+                      <td className="px-6 py-4 text-slate-500">
+                        {ride.createdAt?.toDate ? ride.createdAt.toDate().toLocaleDateString() : new Date(ride.createdAt).toLocaleDateString()}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -251,11 +253,11 @@ export default function AdminPanel() {
                         <p className="font-semibold text-slate-900">{c.name}</p>
                         <p className="text-xs text-slate-400">{c.email}</p>
                       </td>
-                      <td className="px-6 py-4">{c._count.bookings}</td>
-                      <td className="px-6 py-4 font-medium text-green-600">₹{c.totalEarnings.toFixed(2)}</td>
-                      <td className="px-6 py-4 font-medium text-red-600">₹{c.totalCommission.toFixed(2)}</td>
+                      <td className="px-6 py-4">{c.bookingCount || 0}</td>
+                      <td className="px-6 py-4 font-medium text-green-600">₹{c.totalEarnings?.toFixed(2) || "0.00"}</td>
+                      <td className="px-6 py-4 font-medium text-red-600">₹{c.totalCommission?.toFixed(2) || "0.00"}</td>
                       <td className={cn("px-6 py-4 font-bold", c.balance < 0 ? "text-red-700" : "text-indigo-700")}>
-                        ₹{c.balance.toFixed(2)}
+                        ₹{c.balance?.toFixed(2) || "0.00"}
                       </td>
                       <td className="px-6 py-4">
                         {c.balance < 0 ? (
@@ -307,9 +309,9 @@ export default function AdminPanel() {
                         <p className="font-semibold text-slate-900">{u.name}</p>
                         <p className="text-xs text-slate-400">{u.email}</p>
                       </td>
-                      <td className="px-6 py-4">{u._count.bookings}</td>
+                      <td className="px-6 py-4">{u.bookingCount || 0}</td>
                       <td className={cn("px-6 py-4 font-bold", u.balance < 0 ? "text-red-700" : "text-indigo-700")}>
-                        ₹{u.balance.toFixed(2)}
+                        ₹{u.balance?.toFixed(2) || "0.00"}
                       </td>
                       <td className="px-6 py-4">
                         {u.balance < 0 ? (

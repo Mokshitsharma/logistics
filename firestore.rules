@@ -1,0 +1,169 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: userId
+    // Fields:
+    //   - name: string (required)
+    //   - email: string (required, email format)
+    //   - balance: number (required)
+    //   - createdAt: timestamp (optional)
+    //
+    // Collection: captains
+    // Document ID: captainId
+    // Fields:
+    //   - name: string (required)
+    //   - email: string (required, email format)
+    //   - balance: number (required)
+    //   - createdAt: timestamp (optional)
+    //
+    // Collection: bookings
+    // Document ID: bookingId
+    // Fields:
+    //   - userId: string (required)
+    //   - captainId: string (required)
+    //   - basePrice: number (required)
+    //   - waitingCharge: number (optional)
+    //   - loadingCharge: number (optional)
+    //   - longDistanceFee: number (optional)
+    //   - lateNightFee: number (optional)
+    //   - totalDiscount: number (optional)
+    //   - finalAmount: number (required)
+    //   - paymentMode: string (required, enum: CASH, ONLINE)
+    //   - status: string (required, enum: COMPLETED, CANCELLED, PENDING)
+    //   - createdAt: timestamp (optional)
+    //
+    // Collection: userTransactions
+    // Document ID: transactionId
+    // Fields:
+    //   - userId: string (required)
+    //   - type: string (required, enum: CREDIT, DEBIT, DISCOUNT)
+    //   - amount: number (required)
+    //   - description: string (optional)
+    //   - balanceAfter: number (required)
+    //   - createdAt: timestamp (optional)
+    //
+    // Collection: captainTransactions
+    // Document ID: transactionId
+    // Fields:
+    //   - captainId: string (required)
+    //   - type: string (required, enum: EARNING, COMMISSION, ADJUSTMENT, SETTLEMENT)
+    //   - amount: number (required)
+    //   - description: string (optional)
+    //   - balanceAfter: number (required)
+    //   - createdAt: timestamp (optional)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "mokshitsharmalaptop@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasRequiredFields(['name', 'email', 'balance']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             isValidEmail(data.email) &&
+             data.balance is number;
+    }
+
+    function isValidCaptain(data) {
+      return hasRequiredFields(['name', 'email', 'balance']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             isValidEmail(data.email) &&
+             data.balance is number;
+    }
+
+    function isValidBooking(data) {
+      return hasRequiredFields(['userId', 'captainId', 'basePrice', 'finalAmount', 'paymentMode', 'status']) &&
+             data.userId is string && data.captainId is string &&
+             data.basePrice is number && data.finalAmount is number &&
+             data.paymentMode in ['CASH', 'ONLINE'] &&
+             data.status in ['COMPLETED', 'CANCELLED', 'PENDING'];
+    }
+
+    function isValidUserTransaction(data) {
+      return hasRequiredFields(['userId', 'type', 'amount', 'balanceAfter']) &&
+             data.userId is string &&
+             data.type in ['CREDIT', 'DEBIT', 'DISCOUNT'] &&
+             data.amount is number &&
+             data.balanceAfter is number;
+    }
+
+    function isValidCaptainTransaction(data) {
+      return hasRequiredFields(['captainId', 'type', 'amount', 'balanceAfter']) &&
+             data.captainId is string &&
+             data.type in ['EARNING', 'COMMISSION', 'ADJUSTMENT', 'SETTLEMENT'] &&
+             data.amount is number &&
+             data.balanceAfter is number;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /captains/{captainId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /bookings/{bookingId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /userTransactions/{transactionId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /captainTransactions/{transactionId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

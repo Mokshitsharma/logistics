@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import { getUsers, getUser, subscribeUserTransactions, addFunds } from "../services/firestoreService";
 import { motion } from "motion/react";
 import { Wallet, ArrowUpRight, ArrowDownLeft, History, AlertTriangle, Loader2, Plus } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
@@ -13,6 +13,7 @@ export default function UserWalletPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [selectedUserId, setSelectedUserId] = useState("");
   const [userData, setUserData] = useState<any>(null);
+  const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [userLoading, setUserLoading] = useState(false);
   const [addAmount, setAddAmount] = useState(500);
@@ -21,10 +22,10 @@ export default function UserWalletPage() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await axios.get("/api/admin/users");
-        setUsers(res.data);
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          setSelectedUserId(res.data[0].id);
+        const data = await getUsers();
+        setUsers(data || []);
+        if (Array.isArray(data) && data.length > 0) {
+          setSelectedUserId(data[0].id);
         }
       } catch (e) {
         console.error(e);
@@ -38,14 +39,18 @@ export default function UserWalletPage() {
   useEffect(() => {
     if (selectedUserId) {
       fetchUserData();
+      const unsubscribe = subscribeUserTransactions(selectedUserId, (txs) => {
+        setTransactions(txs);
+      });
+      return () => unsubscribe();
     }
   }, [selectedUserId]);
 
   const fetchUserData = async () => {
     setUserLoading(true);
     try {
-      const res = await axios.get(`/api/wallet/user/${selectedUserId}`);
-      setUserData(res.data);
+      const data = await getUser(selectedUserId);
+      setUserData(data);
     } catch (e) {
       console.error(e);
     } finally {
@@ -56,11 +61,7 @@ export default function UserWalletPage() {
   const handleAddMoney = async () => {
     setActionLoading(true);
     try {
-      await axios.post("/api/wallet/add", {
-        userId: selectedUserId,
-        amount: addAmount,
-        description: "Manual top-up",
-      });
+      await addFunds(selectedUserId, addAmount);
       await fetchUserData();
     } catch (e) {
       console.error(e);
@@ -178,10 +179,10 @@ export default function UserWalletPage() {
                 </h3>
               </div>
               <div className="divide-y divide-slate-100">
-                {userData.transactions.length === 0 ? (
+                {transactions.length === 0 ? (
                   <div className="p-12 text-center text-slate-400">No transactions yet.</div>
                 ) : (
-                  userData.transactions.map((tx: any) => (
+                  transactions.map((tx: any) => (
                     <div key={tx.id} className="p-4 hover:bg-slate-50 transition-colors flex items-center justify-between">
                       <div className="flex items-center space-x-4">
                         <div className={cn(
@@ -192,7 +193,9 @@ export default function UserWalletPage() {
                         </div>
                         <div>
                           <p className="font-semibold text-slate-900">{tx.description}</p>
-                          <p className="text-xs text-slate-500">{new Date(tx.createdAt).toLocaleString()}</p>
+                          <p className="text-xs text-slate-500">
+                            {tx.createdAt?.toDate ? tx.createdAt.toDate().toLocaleString() : new Date(tx.createdAt).toLocaleString()}
+                          </p>
                         </div>
                       </div>
                       <div className="text-right">
