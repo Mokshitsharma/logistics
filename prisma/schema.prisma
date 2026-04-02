@@ -1,0 +1,71 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id           String            @id @default(uuid())
+  name         String
+  email        String            @unique
+  balance      Float             @default(0)
+  bookings     Booking[]
+  transactions UserTransaction[]
+  createdAt    DateTime          @default(now())
+}
+
+model Captain {
+  id           String               @id @default(uuid())
+  name         String
+  email        String               @unique
+  balance      Float                @default(0)
+  bookings     Booking[]
+  transactions CaptainTransaction[]
+  createdAt    DateTime             @default(now())
+}
+
+model Booking {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  captainId       String
+  captain         Captain  @relation(fields: [captainId], references: [id])
+  basePrice       Float
+  waitingCharge   Float    @default(0)
+  loadingCharge   Float    @default(0)
+  longDistanceFee Float    @default(0)
+  lateNightFee    Float    @default(0)
+  totalDiscount   Float    @default(0)
+  finalAmount     Float
+  paymentMode     String   // "CASH" or "ONLINE"
+  status          String   @default("COMPLETED")
+  createdAt       DateTime @default(now())
+}
+
+model UserTransaction {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  type         String   // "CREDIT", "DEBIT", "DISCOUNT"
+  amount       Float
+  description  String
+  balanceAfter Float
+  createdAt    DateTime @default(now())
+}
+
+model CaptainTransaction {
+  id           String   @id @default(uuid())
+  captainId    String
+  captain      Captain  @relation(fields: [captainId], references: [id])
+  type         String   // "EARNING", "COMMISSION", "ADJUSTMENT", "SETTLEMENT"
+  amount       Float
+  description  String
+  balanceAfter Float
+  createdAt    DateTime @default(now())
+}

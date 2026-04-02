@@ -1,0 +1,5 @@
+{
+  "name": "LogiLedger",
+  "description": "A logistics platform with ledger-based financial tracking, dynamic pricing, and captain settlement systems.",
+  "requestFramePermissions": []
+}
